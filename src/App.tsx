@@ -7,6 +7,7 @@ import OptimizePanel from "./components/OptimizePanel";
 import InterviewPanel from "./components/InterviewPanel";
 import ConfigDialog from "./components/ConfigDialog";
 import PromptConfigDialog from "./components/PromptConfigDialog";
+import ProjectFilesDialog from "./components/ProjectFilesDialog";
 import { useAppStore } from "./store/useAppStore";
 
 function Toast() {
@@ -110,6 +111,7 @@ export default function App() {
       <MainContent />
       <ConfigDialog />
       <PromptConfigDialog />
+      <ProjectFilesDialog />
       <Toast />
     </div>
   );

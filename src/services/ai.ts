@@ -46,7 +46,8 @@ export const DEFAULT_OPTIMIZE_PROMPT = `你是一位专业的简历优化师。�
 1. 保持所有事实信息不变（公司名、职位名、时间等）
 2. 优化语言表达，使用更专业的动词和成果量化
 3. 根据JD需求调整技能和经验的呈现重点
-4. 保持简洁有力，不添加虚假信息
+4. 如有提供「项目材料」，请参考其中的项目经历、技术细节等内容，将其融入简历优化中，使简历更丰富、更具说服力
+5. 保持简洁有力，不添加虚假信息
 
 请严格按照以下JSON格式返回，不要有其他内容：
 
@@ -333,11 +334,15 @@ export async function evaluateResume(
   config: ApiConfig,
   promptConfig: PromptConfig | undefined,
   resumeText: string,
-  jobDescription: string
+  jobDescription: string,
+  projectMaterials?: string
 ): Promise<EvaluationResult> {
   const taskPrompt = promptConfig?.evaluationPrompt?.trim() || DEFAULT_EVALUATION_PROMPT;
   const systemPrompt = mergeSystemPrompt(promptConfig, taskPrompt);
-  const userMessage = `【岗位JD】\n${jobDescription}\n\n【简历内容】\n${resumeText}`;
+  let userMessage = `【岗位JD】\n${jobDescription}\n\n【简历内容】\n${resumeText}`;
+  if (projectMaterials) {
+    userMessage += `\n\n【项目材料（候选人近期的项目PPT、文档等，用于参考其真实项目经历）】\n${projectMaterials}`;
+  }
 
   const raw = await callAI(config, systemPrompt, userMessage);
   const result = safeJsonParse<EvaluationResult>(raw, "简历评估");
@@ -363,11 +368,15 @@ export async function optimizeResume(
   promptConfig: PromptConfig | undefined,
   resumeText: string,
   jobDescription: string,
-  evaluationText: string
+  evaluationText: string,
+  projectMaterials?: string
 ): Promise<{ optimizedResume: string; suggestions: any[] }> {
   const taskPrompt = promptConfig?.optimizePrompt?.trim() || DEFAULT_OPTIMIZE_PROMPT;
   const systemPrompt = mergeSystemPrompt(promptConfig, taskPrompt);
-  const userMessage = `【岗位JD】\n${jobDescription}\n\n【原始简历】\n${resumeText}\n\n【评估建议】\n${evaluationText}`;
+  let userMessage = `【岗位JD】\n${jobDescription}\n\n【原始简历】\n${resumeText}\n\n【评估建议】\n${evaluationText}`;
+  if (projectMaterials) {
+    userMessage += `\n\n【项目材料（候选人近期的项目PPT、文档等，请参考其中的真实项目经历来优化简历）】\n${projectMaterials}`;
+  }
 
   const raw = await callAI(config, systemPrompt, userMessage);
   const result = safeJsonParse<{ optimizedResume: string; suggestions: any[] }>(raw, "简历优化");

@@ -136,6 +136,12 @@ interface AppState {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
 
+  // 项目材料文件夹
+  projectFolderName: string;
+  projectFileList: { name: string; size: number }[];
+  setProjectFolder: (name: string, fileList: { name: string; size: number }[]) => void;
+  clearProjectFolder: () => void;
+
   // 重置
   reset: () => void;
 }
@@ -196,6 +202,11 @@ export const useAppStore = create<AppState>((set) => ({
 
   sidebarOpen: true,
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
+
+  projectFolderName: "",
+  projectFileList: [],
+  setProjectFolder: (projectFolderName, projectFileList) => set({ projectFolderName, projectFileList }),
+  clearProjectFolder: () => set({ projectFolderName: "", projectFileList: [] }),
 
   reset: () =>
     set({

@@ -5,6 +5,12 @@ import { optimizeResume } from "../services/ai";
 import { demoOptimize } from "../services/demo";
 import { db } from "../db/db";
 import { cn } from "../lib/utils";
+import { downloadResumeHTML } from "../lib/html-resume";
+import {
+  loadProjectFolderHandle,
+  readProjectFiles,
+  formatProjectMaterials,
+} from "../lib/project-files";
 
 export default function OptimizePanel() {
   const {
@@ -26,6 +32,7 @@ export default function OptimizePanel() {
 
   const [loading, setLoading] = useState(false);
   const [optimizedInitialized, setOptimizedInitialized] = useState(!!optimizedResume);
+  const [loadingMaterials, setLoadingMaterials] = useState(false);
 
   // 根据建议的接受/拒绝状态动态生成展示简历
   const displayResume = useMemo(() => {
@@ -44,13 +51,36 @@ export default function OptimizePanel() {
     setLoading(true);
     setError(null);
     try {
+      // 尝试读取项目材料
+      let projectMaterials: string | undefined;
+      setLoadingMaterials(true);
+      try {
+        const handle = await loadProjectFolderHandle();
+        if (handle) {
+          const files = await readProjectFiles(handle);
+          projectMaterials = formatProjectMaterials(files) || undefined;
+        }
+      } catch {
+        // 项目材料读取失败不阻断优化流程
+        console.warn("读取项目材料失败，将跳过");
+      } finally {
+        setLoadingMaterials(false);
+      }
+
       const evalText = evaluation
         ? evaluation.dimensions
             .map((d) => `${d.name}(${d.score}分): ${d.comment}；建议: ${d.suggestions.join("；")}`)
             .join("\n")
         : "";
 
-      const result = await optimizeResume(apiConfig, promptConfig, resumeText, jobDescription, evalText);
+      const result = await optimizeResume(
+        apiConfig,
+        promptConfig,
+        resumeText,
+        jobDescription,
+        evalText,
+        projectMaterials
+      );
       setOptimizedResume(result.optimizedResume);
       setSuggestions(result.suggestions);
       setOptimizedInitialized(true);
@@ -148,8 +178,14 @@ export default function OptimizePanel() {
     return (
       <div className="flex flex-col items-center py-14 gap-4 animate-fade-in rounded-xl border bg-card">
         <Loader2 size={40} className="animate-spin text-primary" />
-        <p className="text-sm font-medium">AI 正在优化简历...</p>
-        <p className="text-xs text-muted-foreground">优化表达、对齐JD、突出亮点</p>
+        <p className="text-sm font-medium">
+          {loadingMaterials ? "正在读取项目材料..." : "AI 正在优化简历..."}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {loadingMaterials
+            ? "读取文件夹中的 PPT、Word、PDF 等文件"
+            : "优化表达、对齐JD、突出亮点"}
+        </p>
       </div>
     );
   }
@@ -257,13 +293,20 @@ export default function OptimizePanel() {
       )}
 
       {/* ===== 下载按钮 ===== */}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-3">
         <button
-          onClick={downloadResume}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all shadow-sm"
+          onClick={() => downloadResumeHTML(displayResume, resumeFileName)}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-all shadow-sm"
         >
           <Download size={16} />
-          下载优化后简历
+          下载 HTML 版本
+        </button>
+        <button
+          onClick={downloadResume}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-input bg-card text-sm font-medium hover:bg-accent transition-all"
+        >
+          <Download size={16} />
+          下载 Markdown
         </button>
       </div>
     </div>

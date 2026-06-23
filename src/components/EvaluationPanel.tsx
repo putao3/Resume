@@ -6,6 +6,11 @@ import { putHistory } from "../db/db";
 import { nanoid } from "nanoid";
 import { cn } from "../lib/utils";
 import type { ScoreDimension } from "../types";
+import {
+  loadProjectFolderHandle,
+  readProjectFiles,
+  formatProjectMaterials,
+} from "../lib/project-files";
 
 const DIMENSION_COLORS: Record<string, string> = {
   "岗位匹配度": "bg-blue-500",
@@ -64,7 +69,21 @@ export default function EvaluationPanel() {
     setStatus("analyzing");
     setError(null);
     try {
-      const result = await evaluateResume(apiConfig, promptConfig, resumeText, jobDescription);
+      // 尝试读取项目材料
+      let projectMaterials: string | undefined;
+      try {
+        const handle = await loadProjectFolderHandle();
+        if (handle) {
+          const files = await readProjectFiles(handle);
+          projectMaterials = formatProjectMaterials(files) || undefined;
+        }
+      } catch {
+        console.warn("读取项目材料失败，将跳过");
+      }
+
+      const result = await evaluateResume(
+        apiConfig, promptConfig, resumeText, jobDescription, projectMaterials
+      );
       setEvaluation(result);
       setSuggestions(result.suggestions);
       setStatus("done");
@@ -81,6 +100,7 @@ export default function EvaluationPanel() {
         evaluation: result,
         optimizedResume: null,
         suggestions: result.suggestions,
+        interview: null,
       });
     } catch (e: any) {
       setError(e.message);

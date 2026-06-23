@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileEdit,
+  FolderOpen,
 } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
 import { db } from "../db/db";
@@ -34,6 +35,7 @@ export default function Sidebar() {
     setOptimizedResume,
     setSuggestions,
     setInterview,
+    projectFolderName,
   } = useAppStore();
 
   useEffect(() => {
@@ -142,6 +144,23 @@ export default function Sidebar() {
 
       {/* Config */}
       <div className="px-2 pb-3 space-y-1">
+        <button
+          onClick={() => {
+            const event = new CustomEvent("open-project-files");
+            window.dispatchEvent(event);
+          }}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted transition-colors text-sm"
+        >
+          <FolderOpen size={16} />
+          {sidebarOpen && (
+            <span className="flex items-center gap-1.5">
+              项目材料
+              {projectFolderName && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title={`已配置: ${projectFolderName}`} />
+              )}
+            </span>
+          )}
+        </button>
         <button
           onClick={() => {
             const event = new CustomEvent("open-prompt-config");

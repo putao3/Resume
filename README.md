@@ -1,11 +1,12 @@
 # 简历对比优化智能体
 
-基于 AI 的简历评估、优化与面试模拟工具。上传简历 + 岗位 JD，即可获得四维度专业评估、一键优化和定制化面试题。
+基于 AI 的简历评估、优化与面试模拟工具。上传简历 + 岗位 JD，即可获得四维度专业评估、一键优化和定制化面试题。支持配置本地项目材料文件夹，AI 会结合你的项目 PPT、Word 文档等真实材料进行更精准的简历优化。
 
 ## 功能模块
 
 - **📊 简历评估** — 从岗位匹配度、项目经验、工作经验、个人简介四个维度打分（0-100），输出综合评语和逐条修改建议
 - **✨ 一键优化** — AI 根据评估意见自动改写简历，提供修改前后双栏对比，支持逐条接受/拒绝修改
+- **📁 项目材料** — 配置本地项目文件夹，AI 读取其中的 PPT/.docx/PDF 等材料，将真实项目经历融入简历优化，使结果更丰富、更具说服力
 - **🎯 面试模拟** — 根据 JD 生成 8-12 道面试题，覆盖技术能力、项目经验、行为面试、综合素养，每题含考核要点和参考答案
 - **📝 历史记录** — 所有评估、优化、面试结果自动保存到本地 IndexedDB，随时恢复查看（保留最近 5 条）
 - **⚙️ Prompt 配置** — 四个模块的提示词完全可自定义
@@ -21,7 +22,8 @@
 | 状态管理 | Zustand 5 |
 | 本地存储 | Dexie.js 4 (IndexedDB) |
 | AI API | DeepSeek / Anthropic / OpenAI 兼容 |
-| 文件解析 | pdfjs-dist / mammoth.js / tesseract.js |
+| 文件解析 | pdfjs-dist / mammoth.js / tesseract.js / jszip |
+| 本地目录 | File System Access API |
 
 ## 快速开始
 
@@ -91,6 +93,8 @@ npm run preview
 
 ## 支持的文件格式
 
+### 简历上传
+
 | 格式 | 解析方式 |
 |------|----------|
 | PDF | pdfjs-dist（客户端解析） |
@@ -98,38 +102,60 @@ npm run preview
 | 图片 | tesseract.js（OCR） |
 | 纯文本 / Markdown | 直接读取 |
 
+### 项目材料
+
+> 在侧边栏「项目材料」中配置本地文件夹，AI 评估和优化简历时会自动读取文件夹内的文件内容作为参考上下文。
+
+| 格式 | 扩展名 | 解析方式 |
+|------|--------|----------|
+| Word | .docx | mammoth.js |
+| PDF | .pdf | pdfjs-dist |
+| PPT | .pptx | jszip + XML 解析 |
+| 纯文本 | .txt, .md | FileReader |
+
+> ⚠️ 旧版 .ppt 二进制格式不支持，请转换为 .pptx 格式。文件夹句柄通过 File System Access API 持久化存储在 IndexedDB 中，仅限本地访问。
+
 ## 项目结构
 
 ```
 src/
-├── components/       # UI 组件
-│   ├── ResumeUpload.tsx    # 简历上传（拖拽/文件选择）
-│   ├── JobInput.tsx        # 岗位 JD 输入（文本/URL/图片）
-│   ├── EvaluationPanel.tsx # 评估结果面板（四维度评分）
-│   ├── OptimizePanel.tsx   # 优化面板（双栏对比 + 建议列表）
-│   ├── InterviewPanel.tsx  # 面试题面板（分类折叠）
-│   ├── Sidebar.tsx         # 侧边栏（历史记录/配置入口）
-│   ├── ConfigDialog.tsx    # API 配置弹窗
-│   └── PromptConfigDialog.tsx # Prompt 配置弹窗
+├── components/            # UI 组件
+│   ├── ResumeUpload.tsx       # 简历上传（拖拽/文件选择）
+│   ├── JobInput.tsx           # 岗位 JD 输入（文本/URL/图片）
+│   ├── EvaluationPanel.tsx    # 评估结果面板（四维度评分）
+│   ├── OptimizePanel.tsx      # 优化面板（双栏对比 + 建议列表）
+│   ├── InterviewPanel.tsx     # 面试题面板（分类折叠）
+│   ├── Sidebar.tsx            # 侧边栏（历史/配置/项目材料入口）
+│   ├── ConfigDialog.tsx       # API 配置弹窗
+│   ├── PromptConfigDialog.tsx # Prompt 配置弹窗
+│   └── ProjectFilesDialog.tsx # 项目材料文件夹配置
 ├── services/
-│   ├── ai.ts          # AI API 调用（多格式兼容）
-│   └── demo.ts        # Demo 数据
+│   ├── ai.ts             # AI API 调用（多格式兼容）
+│   └── demo.ts           # Demo 数据
 ├── db/
-│   └── db.ts          # IndexedDB 封装（Dexie.js）
+│   └── db.ts             # IndexedDB 封装（Dexie.js，含 settings 表）
 ├── store/
-│   └── useAppStore.ts # Zustand 全局状态
+│   └── useAppStore.ts    # Zustand 全局状态
 ├── types/
-│   └── index.ts       # TypeScript 类型定义
+│   ├── index.ts              # TypeScript 类型定义
+│   └── file-system-access.d.ts # File System Access API 类型补充
 ├── lib/
-│   └── utils.ts       # 工具函数
-├── App.tsx            # 主布局（四步流程）
-└── main.tsx           # 入口
+│   ├── utils.ts              # 工具函数
+│   └── project-files.ts      # 项目材料读取/解析/格式化
+├── App.tsx               # 主布局（四步流程）
+└── main.tsx              # 入口
 ```
+
+## 浏览器兼容
+
+- **Chrome 86+** / **Edge 86+** — 完整功能支持（含项目材料文件夹选择）
+- 其他浏览器 — 除项目材料功能（需 File System Access API）外，其余功能均可正常使用
 
 ## 数据存储
 
 - **API 配置 / Prompt 配置** — 浏览器 localStorage
-- **历史记录** — 浏览器 IndexedDB（`resume-optimizer` 数据库）
+- **历史记录** — 浏览器 IndexedDB（`resume-optimizer` 数据库，`history` 表）
+- **项目材料文件夹句柄** — 浏览器 IndexedDB（`settings` 表，仅存储文件夹引用，不存储文件内容）
 - 所有数据仅存储在用户本地浏览器，不上传至任何服务器
 
 ## License
